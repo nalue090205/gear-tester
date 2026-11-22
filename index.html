@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>감속기 테스터</title>
+<meta name="theme-color" content="#1F4AA8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root {
+  --page: #EEF1F4;
+  --panel: #FFFFFF;
+  --well: #F5F7F9;
+  --line: #D6DCE2;
+  --line-strong: #B9C2CB;
+  --ink: #18212B;
+  --ink-2: #4A5664;
+  --ink-3: #6F7B88;
+  --blue: #1F4AA8;
+  --blue-ink: #173B8A;
+  --blue-wash: #E7EDF8;
+  --brass: #A8781C;
+  --brass-ink: #7E5A12;
+  --brass-wash: #F7EEDB;
+  --red: #B8322A;
+  --red-ink: #93261F;
+  --red-wash: #FBEAE8;
+  --green: #2D7A4B;
+  --green-wash: #E4F2E9;
+  --amber-ink: #8A5D00;
+  --amber-wash: #FFF3D4;
+  --r-s: 6px;
+  --r-m: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 15.5px/1.55 var(--font);
+  font-variant-numeric: tabular-nums;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ── header ── */
+.top {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 14px 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.top h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.top .spacer { flex: 1; }
+.conn { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 14px; }
+.conn .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); flex: none; }
+.conn[data-state="connected"] .dot { background: var(--green); }
+.conn[data-state="connecting"] .dot, .conn[data-state="reconnecting"] .dot { background: var(--brass); }
+.conn[data-state="demo"] .dot { background: var(--blue); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 40px; padding: 0 16px;
+  border: 1px solid var(--line-strong); border-radius: var(--r-s);
+  background: var(--panel); cursor: pointer; font-weight: 600; font-size: 15px;
+}
+.btn:hover { background: var(--well); }
+.btn:disabled { cursor: not-allowed; opacity: .45; }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn.primary:hover { background: var(--blue-ink); }
+.btn.stop { background: var(--red); border-color: var(--red); color: #fff; min-height: 48px; padding: 0 22px; font-size: 16px; }
+.btn.stop:hover { background: var(--red-ink); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--blue); }
+.btn.quiet:hover { background: var(--blue-wash); }
+
+.banner {
+  margin: 16px 24px 0; padding: 12px 16px;
+  border: 1px solid #E8C873; border-radius: var(--r-s);
+  background: var(--amber-wash); color: #4D3700; font-size: 14.5px;
+}
+.banner[hidden] { display: none; }
+
+/* ── layout ── */
+main {
+  display: grid; gap: 20px;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  padding: 20px 24px 32px;
+  max-width: 1320px; margin: 0 auto;
+}
+section.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  padding: 20px 22px 22px;
+  min-width: 0;
+}
+section.panel > h2 { margin: 0 0 16px; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.live-col { display: grid; gap: 20px; align-content: start; min-width: 0; }
+
+/* ── form ── */
+.field { margin: 0 0 18px; }
+.field > .label, .field > label.label { display: block; font-size: 14px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+.help { margin: 6px 0 0; font-size: 13.5px; color: var(--ink-3); line-height: 1.5; }
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-s); overflow: hidden; background: var(--panel); }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; padding: 8px 16px; min-width: 64px; text-align: center; font-weight: 600; font-size: 15px; border-left: 1px solid var(--line); }
+.seg label:first-child span { border-left: 0; }
+.seg input:checked + span { background: var(--blue); color: #fff; }
+.seg input:focus-visible + span { outline: 3px solid var(--blue); outline-offset: -3px; }
+
+.ratio-row { display: flex; align-items: center; gap: 10px; }
+.ratio-row input {
+  width: 168px; height: 48px; padding: 0 12px;
+  font-size: 24px; font-weight: 600; text-align: right;
+  border: 1px solid var(--line-strong); border-radius: var(--r-s); background: var(--panel);
+}
+.ratio-row .suffix { font-size: 22px; font-weight: 600; color: var(--ink-2); }
+.ratio-row input[aria-invalid="true"] { border-color: var(--red); background: var(--red-wash); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chips button {
+  border: 1px solid var(--line); background: var(--well); border-radius: 999px;
+  padding: 3px 11px; font-size: 13.5px; cursor: pointer; color: var(--ink-2);
+}
+.chips button:hover { border-color: var(--blue); color: var(--blue-ink); }
+.chips button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue-wash); color: var(--blue-ink); font-weight: 600; }
+.msg { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
+.msg:empty { display: none; }
+.msg.error { color: var(--red-ink); font-weight: 600; }
+.msg.warn { color: var(--amber-ink); }
+
+select, .num {
+  height: 40px; padding: 0 10px;
+  border: 1px solid var(--line-strong); border-radius: var(--r-s); background: var(--panel);
+}
+.num { width: 130px; text-align: right; }
+.num[aria-invalid="true"] { border-color: var(--red); background: var(--red-wash); }
+.inline { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+
+/* DIP switch helper */
+.dip { display: inline-flex; gap: 6px; padding: 8px 10px; background: #2B323A; border-radius: var(--r-s); }
+.dip .sw { display: grid; justify-items: center; gap: 3px; color: #C9D1D9; font-size: 11px; font-weight: 600; }
+.dip .slot { width: 16px; height: 30px; background: #12171C; border-radius: 3px; position: relative; }
+.dip .knob { position: absolute; left: 2px; width: 12px; height: 13px; background: #F2F4F6; border-radius: 2px; top: 15px; transition: top .15s; }
+.dip .sw.on .knob { top: 2px; }
+.dip-caption { font-size: 13px; color: var(--ink-3); margin-top: 6px; }
+
+.toggle { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.toggle input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--blue); flex: none; }
+.toggle strong { font-weight: 600; }
+
+details.adv { border-top: 1px solid var(--line); padding-top: 12px; margin-bottom: 16px; }
+details.adv summary { cursor: pointer; font-weight: 600; color: var(--ink-2); font-size: 14.5px; }
+details.adv .inline { margin-top: 12px; }
+
+dl.calc {
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 16px;
+  margin: 0 0 18px; padding: 12px 14px;
+  background: var(--well); border-radius: var(--r-s); font-size: 14px;
+}
+dl.calc dt { color: var(--ink-3); }
+dl.calc dd { margin: 0; text-align: right; font-weight: 600; }
+
+.apply-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.apply-row .btn { min-width: 120px; min-height: 46px; font-size: 16px; }
+.apply-state { font-size: 14px; color: var(--ink-2); }
+.apply-state[data-kind="ok"] { color: var(--green); font-weight: 600; }
+.apply-state[data-kind="pending"] { color: var(--amber-ink); font-weight: 600; }
+
+/* ── live ── */
+.live-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; }
+.wheel { position: relative; width: 300px; height: 300px; }
+.wheel svg { width: 100%; height: 100%; display: block; }
+.wheel .face { fill: #FFFFFF; stroke: var(--line-strong); stroke-width: 1.5; }
+.wheel .tick { stroke: #3A4450; stroke-width: 1; }
+.wheel .tick.mid { stroke-width: 1.5; }
+.wheel .tick.major { stroke: var(--ink); stroke-width: 2.2; }
+.wheel .tlabel { font: 600 12px var(--font); fill: var(--ink-2); text-anchor: middle; dominant-baseline: central; }
+.wheel .arc { fill: none; stroke: var(--brass); stroke-width: 10; stroke-linecap: round; opacity: .55; }
+.wheel .arc-full { fill: none; stroke: var(--brass); stroke-width: 10; opacity: .35; }
+.wheel .tgt-mark { fill: var(--brass); }
+.wheel .needle { stroke: var(--blue); stroke-width: 3.5; stroke-linecap: round; }
+.wheel .hub { fill: var(--blue); }
+.wheel .needle-g { transition: transform .16s linear; }
+.wheel .readout {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  text-align: center; pointer-events: none; width: 168px;
+}
+.readout .now { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.readout .turns { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+
+.facts { display: grid; gap: 14px; min-width: 0; }
+.fact .k { font-size: 13.5px; color: var(--ink-3); }
+.fact .v { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.fact .v.brass { color: var(--brass-ink); }
+.fact .v small { font-size: 15px; font-weight: 600; color: var(--ink-2); margin-left: 4px; letter-spacing: 0; }
+.mode-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 12px; border-radius: 999px; background: var(--well); border: 1px solid var(--line);
+  font-weight: 600; font-size: 15px;
+}
+.mode-chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--line-strong); }
+.mode-chip[data-mode="I"] i { background: var(--green); }
+.mode-chip[data-mode="J"] i, .mode-chip[data-mode="M"] i { background: var(--blue); }
+.mode-chip[data-mode="L"] i, .mode-chip[data-mode="F"] i { background: var(--brass); }
+
+.lock {
+  margin-top: 18px; padding: 12px 14px; border-radius: var(--r-s);
+  background: var(--brass-wash); color: #5A4110; font-size: 14.5px;
+}
+.lock[hidden] { display: none; }
+
+.live-bottom { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.joy { display: grid; gap: 6px; justify-items: center; }
+.joy-pad { width: 120px; height: 120px; touch-action: none; user-select: none; }
+.joy-pad .box { fill: var(--well); stroke: var(--line-strong); }
+.joy-pad .cross { stroke: var(--line-strong); stroke-width: 1; }
+.joy-pad .thr { stroke: var(--brass); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
+.joy-pad .dz { fill: none; stroke: var(--ink-3); stroke-dasharray: 2 3; }
+.joy-pad .ball { fill: var(--blue); }
+.joy-pad .press { fill: none; stroke: var(--blue); stroke-width: 3; opacity: 0; }
+.joy-pad.pressed .press { opacity: 1; }
+.joy-pad.interactive { cursor: grab; }
+.joy .cap { font-size: 13px; color: var(--ink-3); text-align: center; max-width: 160px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+.log { max-height: 220px; overflow: auto; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.log li { display: grid; grid-template-columns: 70px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--well); }
+.log li time { color: var(--ink-3); }
+.log li.err { color: var(--red-ink); }
+.log li.ok { color: var(--green); }
+.log:empty::before { content: "아직 기록이 없어요."; color: var(--ink-3); }
+
+.demo-keys { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
+.demo-keys[hidden] { display: none; }
+kbd { font: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--panel); }
+
+@media (max-width: 1080px) {
+  .live-top { grid-template-columns: 1fr; justify-items: center; }
+  .facts { width: 100%; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+}
+@media (max-width: 880px) {
+  main { grid-template-columns: 1fr; padding: 14px 12px 28px; }
+  .top { padding: 12px 14px; }
+  .banner { margin: 12px 12px 0; }
+  .wheel { width: 264px; height: 264px; }
+  .live-bottom { grid-template-columns: 1fr; justify-items: center; }
+  .actions { justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wheel .needle-g, .dip .knob { transition: none; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>감속기 테스터</h1>
+  <div class="spacer"></div>
+  <div class="conn" id="conn" data-state="idle" aria-live="polite"><span class="dot"></span><span id="connText">연결 안 됨</span></div>
+  <button class="btn primary" id="btnConnect" type="button">연결</button>
+  <button class="btn quiet" id="btnDemo" type="button">데모 보기</button>
+</header>
+
+<div class="banner" id="banner" role="status" hidden></div>
+
+<main>
+  <section class="panel" aria-labelledby="hSettings">
+    <h2 id="hSettings">감속기 설정</h2>
+
+    <div class="field" role="radiogroup" aria-labelledby="lGear">
+      <span class="label" id="lGear">감속기 종류</span>
+      <div class="seg">
+        <label><input type="radio" name="gear" value="H" checked><span>하모닉</span></label>
+        <label><input type="radio" name="gear" value="P"><span>유성</span></label>
+        <label><input type="radio" name="gear" value="C"><span>기타</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label" for="ratio">감속비</label>
+      <div class="ratio-row">
+        <input id="ratio" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="100" aria-describedby="ratioMsg">
+        <span class="suffix">: 1</span>
+      </div>
+      <div class="chips" id="chips" aria-label="자주 쓰는 감속비"></div>
+      <p class="msg" id="ratioMsg" aria-live="polite"></p>
+    </div>
+
+    <div class="field">
+      <label class="label" for="micro">마이크로스텝</label>
+      <div class="inline">
+        <select id="micro">
+          <option value="1">1 (풀스텝)</option>
+          <option value="2">1/2 (2/A, 2/B)</option>
+          <option value="4">1/4</option>
+          <option value="8">1/8</option>
+          <option value="16" selected>1/16</option>
+          <option value="32">1/32</option>
+        </select>
+        <div>
+          <div class="dip" id="dip" aria-hidden="true"></div>
+          <div class="dip-caption" id="dipText"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label" for="spr">모터</label>
+      <select id="spr">
+        <option value="200" selected>1.8° (1회전 200스텝)</option>
+        <option value="400">0.9° (1회전 400스텝)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="toggle"><input type="checkbox" id="rev" checked>
+        <span><strong>출력 방향 반전</strong>
+          <span class="help" id="revHelp" style="display:block"></span></span>
+      </label>
+    </div>
+
+    <div class="field" role="radiogroup" aria-labelledby="lStep">
+      <span class="label" id="lStep">각도 조정 단위 (조이스틱 위/아래 한 번)</span>
+      <div class="seg">
+        <label><input type="radio" name="step" value="0.1"><span>0.1°</span></label>
+        <label><input type="radio" name="step" value="1" checked><span>1°</span></label>
+        <label><input type="radio" name="step" value="10"><span>10°</span></label>
+      </div>
+    </div>
+
+    <details class="adv" id="adv">
+      <summary>고급 설정</summary>
+      <div class="inline">
+        <div>
+          <label class="label" for="maxHz" style="display:block;font-size:14px;font-weight:600;color:var(--ink-2);margin-bottom:6px">최대 펄스 속도 (Hz)</label>
+          <input class="num" id="maxHz" type="text" inputmode="numeric" value="20000" aria-describedby="advMsg">
+        </div>
+        <div>
+          <label class="label" for="maxRpm" style="display:block;font-size:14px;font-weight:600;color:var(--ink-2);margin-bottom:6px">모터 최고 속도 (rpm)</label>
+          <input class="num" id="maxRpm" type="text" inputmode="decimal" value="600" aria-describedby="advMsg">
+        </div>
+      </div>
+      <p class="help">모터가 소리만 나고 돌지 않으면 최대 펄스 속도를 10000으로 낮춰 보세요.</p>
+      <p class="msg error" id="advMsg" aria-live="polite"></p>
+    </details>
+
+    <dl class="calc" id="calc">
+      <dt>출력 1회전 펄스</dt><dd id="cPpr">-</dd>
+      <dt>출력 1°당 펄스</dt><dd id="cPpd">-</dd>
+      <dt>1펄스에 움직이는 각도</dt><dd id="cRes">-</dd>
+      <dt>최고 출력 속도</dt><dd id="cMax">-</dd>
+      <dt>각도 이동 속도</dt><dd id="cMove">-</dd>
+    </dl>
+
+    <div class="apply-row">
+      <button class="btn primary" id="btnApply" type="button" disabled>적용</button>
+      <span class="apply-state" id="applyState" aria-live="polite">연결하면 적용할 수 있어요.</span>
+    </div>
+  </section>
+
+  <div class="live-col">
+    <section class="panel" aria-labelledby="hLive">
+      <h2 id="hLive">실시간 상태</h2>
+      <div class="live-top">
+        <div class="wheel" id="wheel">
+          <svg viewBox="-170 -170 340 340" role="img" aria-labelledby="wheelTitle">
+            <title id="wheelTitle">출력축 각도 눈금판</title>
+            <circle class="face" r="160"></circle>
+            <g id="ticks"></g>
+            <circle class="arc-full" id="arcFull" r="132" style="display:none"></circle>
+            <path class="arc" id="arc" d=""></path>
+            <path class="tgt-mark" id="tgtMark" d="M0,-160 L-7,-170 L7,-170 Z"></path>
+            <g class="needle-g" id="needle">
+              <line class="needle" x1="0" y1="-122" x2="0" y2="-162"></line>
+              <circle class="hub" cy="-122" r="5"></circle>
+            </g>
+          </svg>
+          <div class="readout">
+            <div class="now" id="rNow">0.000°</div>
+            <div class="turns" id="rTurns">현재 위치</div>
+          </div>
+        </div>
+        <div class="facts">
+          <div class="fact"><div class="k">상태</div><div><span class="mode-chip" id="modeChip" data-mode=""><i></i><span id="modeText">연결 안 됨</span></span></div></div>
+          <div class="fact"><div class="k">설정 각도 (가운데 버튼을 누르면 이만큼 이동)</div><div class="v brass" id="rTgt">-</div></div>
+          <div class="fact"><div class="k">출력축 속도</div><div class="v" id="rRpm">-</div></div>
+          <div class="fact"><div class="k">모터 스텝 위치</div><div class="v" style="font-size:20px" id="rSteps">-</div></div>
+        </div>
+      </div>
+      <div class="lock" id="lock" hidden>조이스틱이 잠겨 있어요. 왼쪽에서 감속기 설정을 확인하고 <strong>적용</strong>을 누르세요.</div>
+      <div class="live-bottom">
+        <div class="joy">
+          <svg class="joy-pad" id="joyPad" viewBox="-60 -60 120 120" role="img" aria-label="조이스틱 위치">
+            <rect class="box" x="-58" y="-58" width="116" height="116" rx="10"></rect>
+            <line class="cross" x1="-58" y1="0" x2="58" y2="0"></line>
+            <line class="cross" x1="0" y1="-58" x2="0" y2="58"></line>
+            <line class="thr" x1="-58" y1="-25" x2="58" y2="-25"></line>
+            <line class="thr" x1="-58" y1="25" x2="58" y2="25"></line>
+            <circle class="dz" r="7.5"></circle>
+            <circle class="press" r="20"></circle>
+            <circle class="ball" id="joyBall" r="9"></circle>
+          </svg>
+          <div class="cap" id="joyCap">좌우로 밀면 회전, 위아래로 밀면 각도 조정</div>
+        </div>
+        <div>
+          <div class="actions">
+            <button class="btn stop" id="btnStop" type="button" disabled>정지</button>
+            <button class="btn" id="btnZero" type="button" disabled>영점 잡기</button>
+            <button class="btn" id="btnFree" type="button" disabled>모터 힘 풀기</button>
+          </div>
+          <p class="help" id="freeHelp">힘을 푼 동안 손으로 돌린 각도는 위치에 반영되지 않아요. 다시 고정한 뒤 영점을 잡으세요.</p>
+          <p class="demo-keys" id="demoKeys" hidden>데모 조작: 조이스틱 그림을 끌거나 <kbd>←</kbd><kbd>→</kbd> 회전, <kbd>↑</kbd><kbd>↓</kbd> 각도, <kbd>Space</kbd> 가운데 버튼</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="hLog">
+      <h2 id="hLog">기록</h2>
+      <ul class="log" id="log" aria-live="polite"></ul>
+    </section>
+  </div>
+</main>
+
+<script>
+'use strict';
+/* ───────────── 공통 상수 (펌웨어와 같아야 함) ───────────── */
+const NUS = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const NUS_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+const NUS_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+const DEVICE_PREFIX = 'GearTester';
+const MAX_PPR = 200000000;
+const POS_LIMIT = 2000000000;
+const TGT_LIMIT = 3600;
+const MOVE_FRAC = 0.5;
+const PRESETS = {
+  H: [30, 50, 80, 100, 120, 160],
+  P: [3, 4, 5, 5.18, 7, 10, 13.73, 15, 20, 26.85, 50, 100],
+  C: []
+};
+const DIP = { 1: ['ON', 'ON', 'OFF'], 2: ['ON', 'OFF', 'ON'], 4: ['ON', 'OFF', 'OFF'], 8: ['OFF', 'ON', 'OFF'], 16: ['OFF', 'OFF', 'ON'], 32: ['OFF', 'OFF', 'OFF'] };
+const MODE_TEXT = { L: '잠김 (적용 전)', F: '모터 힘 풀림', I: '대기', J: '수동 회전', M: '각도 이동 중' };
+const ERR_TEXT = {
+  RATIO_NAN: '감속비가 숫자가 아니에요.', RATIO_LE0: '감속비는 0보다 커야 해요.', RATIO_LT1: '1보다 작은 값은 감속이 아니라 증속이에요.',
+  RATIO_BIG: '감속비가 너무 커서 기기가 위치를 계산할 수 없어요.', MICRO: '마이크로스텝 값이 올바르지 않아요.', SPR: '모터 스텝 수가 올바르지 않아요.',
+  MAXHZ: '최대 펄스 속도는 100~200000 Hz 사이여야 해요.', MAXRPM: '모터 최고 속도는 1~3000 rpm 사이여야 해요.', STEP: '각도 조정 단위가 올바르지 않아요.',
+  GEAR: '감속기 종류가 올바르지 않아요.', BUSY: '모터가 움직이는 중이에요. 멈춘 뒤 다시 하세요.', FMT: '기기가 명령을 이해하지 못했어요. 펌웨어 버전을 확인하세요.'
+};
+const EVT_TEXT = {
+  MOVE_DONE: ['각도 이동을 마쳤어요.', 'ok'], MOVE_ABORT: ['각도 이동을 중간에 멈췄어요.', ''],
+  RANGE: ['이동 범위 한계에 닿았어요. 영점을 다시 잡으세요.', 'err'], LOCKED: ['설정을 적용해야 조이스틱이 움직여요.', 'err'],
+  FREE: ['모터 힘이 풀려 있어요. 모터 고정을 누르세요.', 'err'], ZERO_TGT: ['설정 각도가 0°예요. 조이스틱을 위아래로 밀어 각도를 정하세요.', 'err'],
+  NOSTEPPER: ['모터 출력을 시작하지 못했어요. 펄스 핀 배선과 코드를 확인하세요.', 'err']
+};
+
+const $ = (id) => document.getElementById(id);
+const nf = (v, d = 0) => Number(v).toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtSig = (v) => {
+  if (!Number.isFinite(v)) return '-';
+  const a = Math.abs(v);
+  if (a >= 1000) return nf(v, 0);
+  if (a >= 100) return nf(v, 1);
+  if (a >= 10) return nf(v, 2);
+  if (a >= 1) return nf(v, 3);
+  if (a >= 0.01) return nf(v, 4);
+  return String(Number(v.toPrecision(3)));
+};
+const fmtAngle = (v) => {
+  const r2 = Math.round(v * 100) / 100;
+  const d = Number.isInteger(r2) ? 0 : Number.isInteger(Math.round(r2 * 100) / 10) ? 1 : 2;
+  return nf(r2, d);
+};
+const fmtDuration = (sec) => {
+  if (!Number.isFinite(sec)) return '-';
+  if (sec < 60) return `${nf(sec, sec < 10 ? 1 : 0)}초`;
+  if (sec < 3600) return `${nf(sec / 60, 1)}분`;
+  return `${nf(sec / 3600, 1)}시간`;
+};
+
+/* ───────────── 입력 검증 ───────────── */
+function parseRatio(raw) {
+  let t = String(raw).trim().replace(/\s+/g, '');
+  const m = t.match(/^(.+):1$/);
+  if (m) t = m[1];
+  if (t === '') return { err: 'EMPTY' };
+  if (/^\d+,\d+$/.test(t)) return { err: 'COMMA' };
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(t)) return { err: 'NAN' };
+  const v = Number(t);
+  if (!Number.isFinite(v)) return { err: 'NAN' };
+  return { v };
+}
+
+function readForm() {
+  return {
+    gear: document.querySelector('input[name="gear"]:checked').value,
+    ratioRaw: $('ratio').value,
+    micro: Number($('micro').value),
+    spr: Number($('spr').value),
+    rev: $('rev').checked,
+    step: Number(document.querySelector('input[name="step"]:checked').value),
+    maxHzRaw: $('maxHz').value,
+    maxRpmRaw: $('maxRpm').value
+  };
+}
+
+function validate(f) {
+  const out = { ok: false, ratioErr: '', advErr: '', warns: [], cfg: null, d: null };
+  const perRev = f.spr * f.micro;
+  const maxRatio = MAX_PPR / perRev;
+
+  const hzT = String(f.maxHzRaw).trim();
+  const maxHz = /^\d+$/.test(hzT) ? Number(hzT) : NaN;
+  const rpmT = String(f.maxRpmRaw).trim();
+  const maxRpm = /^(\d+\.?\d*|\.\d+)$/.test(rpmT) ? Number(rpmT) : NaN;
+  if (!(maxHz >= 100 && maxHz <= 200000)) out.advErr = '최대 펄스 속도는 100~200000 사이의 정수로 입력하세요.';
+  else if (!(maxRpm >= 1 && maxRpm <= 3000)) out.advErr = '모터 최고 속도는 1~3000 사이로 입력하세요.';
+
+  const r = parseRatio(f.ratioRaw);
+  if (r.err === 'EMPTY') out.ratioErr = '감속비를 입력하세요.';
+  else if (r.err === 'COMMA') out.ratioErr = '소수점은 쉼표 대신 마침표(.)로 입력하세요. 예: 5.18';
+  else if (r.err === 'NAN') out.ratioErr = '숫자만 입력할 수 있어요. 예: 100, 5.18';
+  else if (r.v <= 0) out.ratioErr = '감속비는 0보다 커야 해요.';
+  else if (r.v < 1) out.ratioErr = '1보다 작으면 감속이 아니라 증속이에요. 1 이상을 입력하세요.';
+  else if (r.v > maxRatio) {
+    out.ratioErr = `감속비가 너무 커요. 지금 설정(마이크로스텝 1/${f.micro}, 모터 ${f.spr}스텝)에서는 ${nf(Math.floor(maxRatio * 1000) / 1000, maxRatio % 1 ? 3 : 0)}까지 쓸 수 있어요.` +
+      (f.micro > 1 ? ' 마이크로스텝을 낮추면 더 큰 값도 쓸 수 있어요.' : '');
+  }
+  if (out.ratioErr || out.advErr) return out;
+
+  const ratio = r.v;
+  const ppr = perRev * ratio;
+  const allowedHz = Math.max(1, Math.min(maxHz, maxRpm / 60 * perRev));
+  const maxOut = allowedHz / ppr * 60;
+  const d = { ppr, ppd: ppr / 360, res: 360 / ppr, maxOut, moveOut: maxOut * MOVE_FRAC, secPerRev: 60 / maxOut };
+  if (f.gear === 'H' && ratio < 30) out.warns.push('하모닉 감속기는 보통 30:1 이상이에요. 값이 맞는지 확인하세요.');
+  if (f.gear === 'P' && ratio > 1000) out.warns.push('유성 감속기에서는 흔치 않은 값이에요. 값이 맞는지 확인하세요.');
+  if (d.secPerRev > 600) out.warns.push(`최고 속도로 돌려도 출력축 1회전에 ${fmtDuration(d.secPerRev)} 걸려요.`);
+  if (d.res > f.step / 2) out.warns.push(`1펄스에 ${fmtSig(d.res)}°씩 움직여서 ${f.step}° 단위로 정확히 맞추기 어려워요. 마이크로스텝을 올리세요.`);
+  out.ok = true;
+  out.d = d;
+  out.cfg = { gear: f.gear, ratio, ratioStr: String(ratio), micro: f.micro, spr: f.spr, rev: f.rev, maxHz, maxRpm, step: f.step };
+  return out;
+}
+
+function sameCfg(a, b) {
+  if (!a || !b) return false;
+  const near = (x, y) => Math.abs(x - y) <= 1e-9 * Math.max(1, Math.abs(x), Math.abs(y));
+  return a.gear === b.gear && near(a.ratio, b.ratio) && a.micro === b.micro && a.spr === b.spr &&
+    a.rev === b.rev && a.maxHz === b.maxHz && near(a.maxRpm, b.maxRpm) && near(a.step, b.step);
+}
+
+/* ───────────── 블루투스 연결 ───────────── */
+class BleLink {
+  constructor(h) {
+    this.h = h; this.device = null; this.rx = null; this.tx = null;
+    this.buf = ''; this.dec = new TextDecoder(); this.enc = new TextEncoder();
+    this.q = Promise.resolve(); this.manual = false; this.retries = 0;
+    this._onValue = (e) => this.onValue(e);
+    this._onGone = () => this.onGone();
+  }
+  get name() { return this.device && this.device.name ? this.device.name : DEVICE_PREFIX; }
+  async connect() {
+    this.device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [NUS] }, { namePrefix: DEVICE_PREFIX }],
+      optionalServices: [NUS]
+    });
+    this.device.addEventListener('gattserverdisconnected', this._onGone);
+    this.manual = false;
+    await this.open();
+  }
+  async open() {
+    this.h.state('connecting');
+    const server = await this.device.gatt.connect();
+    const svc = await server.getPrimaryService(NUS);
+    this.rx = await svc.getCharacteristic(NUS_RX);
+    this.tx = await svc.getCharacteristic(NUS_TX);
+    this.tx.removeEventListener('characteristicvaluechanged', this._onValue);
+    this.tx.addEventListener('characteristicvaluechanged', this._onValue);
+    await this.tx.startNotifications();
+    this.buf = '';
+    this.retries = 0;
+    this.h.state('connected', this.name);
+    this.send('HELLO');
+  }
+  onValue(e) {
+    const dv = e.target.value;
+    this.buf += this.dec.decode(new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength), { stream: true });
+    let i;
+    while ((i = this.buf.indexOf('\n')) >= 0) {
+      const line = this.buf.slice(0, i).replace(/\r$/, '');
+      this.buf = this.buf.slice(i + 1);
+      if (line) this.h.line(line);
+    }
+    if (this.buf.length > 4096) this.buf = '';
+  }
+  send(line) {
+    const bytes = this.enc.encode(line + '\n');
+    this.q = this.q.then(async () => {
+      if (!this.rx) return;
+      for (let off = 0; off < bytes.length; off += 20) {
+        const chunk = bytes.slice(off, off + 20);
+        if (this.rx.writeValueWithResponse) await this.rx.writeValueWithResponse(chunk);
+        else await this.rx.writeValue(chunk);
+      }
+    }).catch((err) => this.h.error('보내기 실패: ' + (err && err.message ? err.message : err)));
+    return this.q;
+  }
+  async onGone() {
+    this.rx = null; this.tx = null;
+    if (this.manual) { this.h.state('disconnected'); return; }
+    while (this.retries < 3 && !this.manual) {
+      this.retries++;
+      this.h.state('reconnecting', this.retries);
+      await new Promise((r) => setTimeout(r, 1000 * this.retries));
+      if (this.manual) break;
+      try { await this.open(); return; } catch (e) { /* 다시 시도 */ }
+    }
+    this.h.state('disconnected', 'lost');
+  }
+  async disconnect() {
+    this.manual = true;
+    if (this.device && this.device.gatt.connected) this.device.gatt.disconnect();
+    else this.h.state('disconnected');
+  }
+}
+
+/* ───────────── 데모 (기기 없이 화면 확인용) ───────────── */
+class DemoDevice {
+  constructor(emit) {
+    this.emit = emit;
+    this.cfg = { gear: 'H', ratio: 100, micro: 16, spr: 200, rev: true, maxHz: 20000, maxRpm: 600, step: 1 };
+    this.applied = false; this.freeReq = false; this.mode = 'L';
+    this.tgt = 90; this.cmdDeg = 0; this.pos = 0; this.vel = 0; this.kind = 'idle'; this.runDir = 0; this.target = 0; this.speed = 1000;
+    this.jx = 0; this.jy = 0; this.btn = false; this.latch = false; this.jogDir = 0; this.stopping = false; this.abort = false;
+    this.yHeld = false; this.yDir = 0; this.yStart = 0; this.yLast = 0; this.t = 0; this.lastSt = 0; this.lastActive = 0; this.rpm = 0; this.lastPos = 0; this.lastRpmT = 0;
+  }
+  sign() { return this.cfg.rev ? -1 : 1; }
+  perRev() { return this.cfg.spr * this.cfg.micro; }
+  ppd() { return this.perRev() * this.cfg.ratio / 360; }
+  allowedHz() { return Math.max(1, Math.min(this.cfg.maxHz, this.cfg.maxRpm / 60 * this.perRev())); }
+  accel() { return Math.min(2e6, Math.max(100, 20 * this.perRev())); }
+  deg() { return this.sign() * Math.round(this.pos) / this.ppd() + 0; }
+  cfgLine() { const c = this.cfg; return `CFG ${c.gear} ${c.ratio} ${c.micro} ${c.spr} ${c.rev ? 1 : 0} ${c.maxHz} ${c.maxRpm} ${c.step} ${this.applied ? 1 : 0} demo`; }
+  stLine() { return `ST ${this.mode} ${this.deg().toFixed(3)} ${this.tgt.toFixed(2)} ${this.rpm.toFixed(3)} ${this.jx.toFixed(2)} ${this.jy.toFixed(2)} ${this.btn ? 1 : 0} ${Math.round(this.pos)}`; }
+  running() { return this.kind !== 'idle'; }
+  receive(line) {
+    const [cmd, ...a] = line.trim().split(/\s+/);
+    const busy = this.mode === 'J' || this.mode === 'M' || this.running();
+    if (cmd === 'HELLO') { this.emit(this.cfgLine()); this.emit(this.stLine()); }
+    else if (cmd === 'SET') {
+      if (busy) return this.emit('ERR BUSY');
+      if (a.length !== 8) return this.emit('ERR FMT');
+      const v = validate({ gear: a[0], ratioRaw: a[1], micro: Number(a[2]), spr: Number(a[3]), rev: a[4] === '1', step: Number(a[7]), maxHzRaw: a[5], maxRpmRaw: a[6] });
+      if (!v.ok) return this.emit('ERR ' + (v.advErr ? 'MAXHZ' : 'RATIO_NAN'));
+      this.cfg = { gear: a[0], ratio: Number(a[1]), micro: Number(a[2]), spr: Number(a[3]), rev: a[4] === '1', maxHz: Number(a[5]), maxRpm: Number(a[6]), step: Number(a[7]) };
+      this.pos = 0; this.cmdDeg = 0; this.applied = true; this.latch = true;
+      this.mode = this.freeReq ? 'F' : 'I';
+      this.emit('OK SET'); this.emit(this.cfgLine()); this.emit(this.stLine());
+    } else if (cmd === 'STOP') {
+      if (this.mode === 'M') { this.abort = true; this.kind = 'stop'; }
+      else if (this.mode === 'J') { this.kind = 'stop'; this.stopping = true; this.latch = true; }
+      this.emit('OK STOP');
+    } else if (cmd === 'ZERO') {
+      if (busy) return this.emit('ERR BUSY');
+      this.pos = 0; this.cmdDeg = 0; this.emit('OK ZERO'); this.emit(this.stLine());
+    } else if (cmd === 'FREE') {
+      if (a[0] === '1') { if (busy) return this.emit('ERR BUSY'); this.freeReq = true; if (this.mode !== 'L') this.mode = 'F'; }
+      else if (a[0] === '0') { this.freeReq = false; if (this.mode === 'F') { this.mode = 'I'; this.cmdDeg = this.deg(); this.latch = true; } }
+      else return this.emit('ERR FMT');
+      this.emit('OK FREE'); this.emit(this.stLine());
+    } else if (cmd === 'ST') this.emit(this.stLine());
+    else this.emit('ERR FMT');
+  }
+  press() {
+    if (this.mode === 'L') this.emit('EVT LOCKED');
+    else if (this.mode === 'F') this.emit('EVT FREE');
+    else if (this.mode === 'M') { this.abort = true; this.kind = 'stop'; }
+    else if (this.mode === 'I') {
+      if (Math.abs(this.tgt) < 1e-6) return this.emit('EVT ZERO_TGT');
+      const next = this.cmdDeg + this.tgt;
+      const steps = this.sign() * next * this.ppd();
+      if (Math.abs(steps) > POS_LIMIT) return this.emit('EVT RANGE');
+      this.target = Math.round(steps); this.speed = this.allowedHz() * MOVE_FRAC; this.kind = 'move';
+      this.cmdDeg = next; this.abort = false; this.mode = 'M';
+    }
+    this.lastActive = this.t;
+  }
+  setJoy(x, y, btn) {
+    this.jx = x; this.jy = y;
+    if (btn && !this.btn) this.press();
+    this.btn = btn;
+  }
+  tick(dt) {
+    this.t += dt;
+    const a = this.accel();
+    const approach = (vt) => { const dv = a * dt; this.vel = this.vel < vt ? Math.min(vt, this.vel + dv) : Math.max(vt, this.vel - dv); };
+    if (this.kind === 'run') { approach(this.runDir * this.speed); this.pos += this.vel * dt; }
+    else if (this.kind === 'stop') { approach(0); this.pos += this.vel * dt; if (this.vel === 0) { this.kind = 'idle'; this.pos = Math.round(this.pos); } }
+    else if (this.kind === 'move') {
+      const rem = this.target - this.pos, dir = Math.sign(rem) || 1;
+      if (Math.abs(rem) < 0.5) { this.pos = this.target; this.vel = 0; this.kind = 'idle'; }
+      else {
+        if (this.vel * dir >= 0 && this.vel * this.vel / (2 * a) >= Math.abs(rem)) this.vel = dir * Math.max(Math.min(this.speed, Math.max(20, a * 0.005)), Math.abs(this.vel) - a * dt);
+        else approach(dir * this.speed);
+        this.pos += this.vel * dt;
+        if ((this.target - this.pos) * dir <= 0) { this.pos = this.target; this.vel = 0; this.kind = 'idle'; }
+      }
+    }
+    let x = this.jx, y = this.jy;
+    if (Math.abs(x) <= 0.15) this.latch = false;
+    if (Math.abs(x) >= Math.abs(y)) y = 0; else x = 0;
+    if (this.mode !== 'L') {
+      const d = y > 0.5 ? 1 : y < -0.5 ? -1 : 0;
+      if (!d) this.yHeld = false;
+      else if (!this.yHeld || d !== this.yDir) { this.yHeld = true; this.yDir = d; this.yStart = this.t; this.yLast = this.t; this.bump(d, 1); }
+      else { const held = this.t - this.yStart; if (this.t - this.yLast >= (held < 1.5 ? 0.3 : 0.1)) { this.yLast = this.t; this.bump(d, held >= 3 ? 10 : 1); } }
+    }
+    const mag = Math.abs(x), want = !this.latch && mag > 0.15 ? Math.sign(x) : 0;
+    const scaled = (mag - 0.15) / 0.85, top = this.allowedHz(), low = Math.max(1, top * 0.02);
+    const hz = low + (top - low) * Math.max(0, Math.min(1, scaled)) ** 2;
+    if (this.mode === 'M' && !this.running()) {
+      this.mode = 'I';
+      if (this.abort) { this.cmdDeg = this.deg(); this.emit('EVT MOVE_ABORT'); } else this.emit('EVT MOVE_DONE');
+    } else if (this.mode === 'I' && want) {
+      this.speed = hz; this.runDir = want * this.sign(); this.kind = 'run'; this.jogDir = want; this.stopping = false; this.mode = 'J';
+    } else if (this.mode === 'J') {
+      if (this.stopping) { if (!this.running()) { this.stopping = false; this.jogDir = 0; this.mode = 'I'; this.cmdDeg = this.deg(); } }
+      else if (want !== this.jogDir) { this.kind = 'stop'; this.stopping = true; }
+      else this.speed = hz;
+    }
+    if (this.t - this.lastRpmT >= 0.1) {
+      this.rpm = this.running() ? this.sign() * (this.pos - this.lastPos) / (this.t - this.lastRpmT) / (this.ppd() * 360) * 60 : 0;
+      this.lastPos = this.pos; this.lastRpmT = this.t;
+    }
+    const busy = this.mode === 'J' || this.mode === 'M' || Math.abs(this.jx) > 0.15 || Math.abs(this.jy) > 0.15 || this.t - this.lastActive < 1;
+    if (this.t - this.lastSt >= (busy ? 0.15 : 0.7)) { this.lastSt = this.t; this.emit(this.stLine()); }
+  }
+  bump(d, mult) {
+    let t = Math.round((this.tgt + d * this.cfg.step * mult) * 100) / 100;
+    this.tgt = Math.max(-TGT_LIMIT, Math.min(TGT_LIMIT, t)); this.lastActive = this.t;
+  }
+}
+
+class DemoLink {
+  constructor(h) { this.h = h; this.dev = null; this.timer = null; this.joy = { x: 0, y: 0, btn: false }; }
+  get name() { return '데모 기기'; }
+  async connect() {
+    this.dev = new DemoDevice((l) => setTimeout(() => this.h.line(l), 0));
+    let last = performance.now();
+    this.timer = setInterval(() => {
+      const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
+      this.dev.setJoy(this.joy.x, this.joy.y, this.joy.btn);
+      this.dev.tick(dt);
+    }, 20);
+    this.h.state('demo', this.name);
+    this.send('HELLO');
+  }
+  send(line) { if (this.dev) setTimeout(() => this.dev.receive(line), 15); return Promise.resolve(); }
+  async disconnect() { clearInterval(this.timer); this.timer = null; this.dev = null; this.h.state('disconnected'); }
+}
+
+/* ───────────── 화면 ───────────── */
+const app = {
+  link: null, connected: false, demo: false, devCfg: null, st: null, pristine: true, lastGear: 'H', lastV: null
+};
+
+function log(text, kind = '') {
+  const li = document.createElement('li');
+  if (kind) li.className = kind;
+  const t = document.createElement('time');
+  const d = new Date();
+  t.textContent = d.toTimeString().slice(0, 8);
+  const s = document.createElement('span');
+  s.textContent = text;
+  li.append(t, s);
+  const ul = $('log');
+  ul.prepend(li);
+  while (ul.children.length > 40) ul.lastChild.remove();
+}
+
+function buildTicks() {
+  const g = $('ticks');
+  const ns = 'http://www.w3.org/2000/svg';
+  for (let d = 0; d < 360; d += 5) {
+    const major = d % 90 === 0, mid = d % 30 === 0;
+    const len = major ? 18 : mid ? 12 : 6;
+    const a = (d - 90) * Math.PI / 180;
+    const r1 = 158, r2 = r1 - len;
+    const ln = document.createElementNS(ns, 'line');
+    ln.setAttribute('x1', (r1 * Math.cos(a)).toFixed(2)); ln.setAttribute('y1', (r1 * Math.sin(a)).toFixed(2));
+    ln.setAttribute('x2', (r2 * Math.cos(a)).toFixed(2)); ln.setAttribute('y2', (r2 * Math.sin(a)).toFixed(2));
+    ln.setAttribute('class', 'tick' + (major ? ' major' : mid ? ' mid' : ''));
+    g.append(ln);
+    if (mid) {
+      const tx = document.createElementNS(ns, 'text');
+      const rl = 104;
+      tx.setAttribute('x', (rl * Math.cos(a)).toFixed(2)); tx.setAttribute('y', (rl * Math.sin(a)).toFixed(2));
+      tx.setAttribute('class', 'tlabel');
+      tx.textContent = d + '°';
+      if (!major) tx.style.opacity = '.55';
+      g.append(tx);
+    }
+  }
+}
+
+function polar(deg, r) {
+  const a = (deg - 90) * Math.PI / 180;
+  return [r * Math.cos(a), r * Math.sin(a)];
+}
+
+function drawWheel(pos, tgt) {
+  $('needle').style.transform = `rotate(${pos}deg)`;
+  const arc = $('arc'), full = $('arcFull'), mark = $('tgtMark');
+  if (!Number.isFinite(tgt) || Math.abs(tgt) < 1e-9) { arc.setAttribute('d', ''); full.style.display = 'none'; mark.style.display = 'none'; return; }
+  const end = pos + tgt;
+  mark.style.display = '';
+  mark.setAttribute('transform', `rotate(${end})`);
+  if (Math.abs(tgt) >= 359.999) { arc.setAttribute('d', ''); full.style.display = ''; return; }
+  full.style.display = 'none';
+  const [x1, y1] = polar(pos, 132), [x2, y2] = polar(end, 132);
+  const large = Math.abs(tgt) > 180 ? 1 : 0, sweep = tgt > 0 ? 1 : 0;
+  arc.setAttribute('d', `M${x1.toFixed(2)},${y1.toFixed(2)} A132,132 0 ${large} ${sweep} ${x2.toFixed(2)},${y2.toFixed(2)}`);
+}
+
+function setJoyBall(x, y, pressed) {
+  $('joyBall').setAttribute('cx', (x * 50).toFixed(1));
+  $('joyBall').setAttribute('cy', (-y * 50).toFixed(1));
+  $('joyPad').classList.toggle('pressed', !!pressed);
+}
+
+function renderDip(micro) {
+  const sw = DIP[micro] || ['?', '?', '?'];
+  $('dip').innerHTML = sw.map((s, i) => `<div class="sw ${s === 'ON' ? 'on' : ''}"><span>${s}</span><div class="slot"><div class="knob"></div></div><span>SW${i + 1}</span></div>`).join('');
+  $('dipText').textContent = `드라이버 DIP 스위치: SW1 ${sw[0]}, SW2 ${sw[1]}, SW3 ${sw[2]}`;
+}
+
+function renderChips(gear, ratioStr) {
+  const list = PRESETS[gear] || [];
+  const box = $('chips');
+  if (box.dataset.gear !== gear) {
+    box.dataset.gear = gear;
+    box.innerHTML = '';
+    for (const v of list) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = String(v);
+      b.dataset.v = String(v);
+      b.addEventListener('click', () => { $('ratio').value = String(v); onFormChange(true); });
+      box.append(b);
+    }
+  }
+  box.hidden = !list.length;
+  const cur = parseRatio(ratioStr);
+  for (const b of box.children) b.setAttribute('aria-pressed', cur.v === Number(b.dataset.v) ? 'true' : 'false');
+}
+
+function revHelpText(gear) {
+  if (gear === 'H') return '하모닉은 보통 출력축이 모터와 반대로 돌아서 켜 둬요. 조이스틱을 오른쪽으로 밀었을 때 반대로 돌면 바꾸세요.';
+  if (gear === 'P') return '유성은 보통 모터와 같은 방향으로 돌아서 꺼 둬요. 실제 방향이 반대면 켜세요.';
+  return '조이스틱을 오른쪽으로 밀었을 때 출력축이 반대로 돌면 켜세요.';
+}
+
+function onFormChange(user = true) {
+  if (user) app.pristine = false;
+  const f = readForm();
+  if (f.gear !== app.lastGear) {
+    if (user) $('rev').checked = f.gear === 'H';
+    app.lastGear = f.gear;
+  }
+  const v = validate(readForm());
+  app.lastV = v;
+  renderChips(f.gear, f.ratioRaw);
+  renderDip(f.micro);
+  $('revHelp').textContent = revHelpText(f.gear);
+
+  const ratioMsg = $('ratioMsg');
+  if (v.ratioErr) { ratioMsg.className = 'msg error'; ratioMsg.textContent = v.ratioErr; }
+  else if (v.warns.length) { ratioMsg.className = 'msg warn'; ratioMsg.textContent = v.warns.join(' '); }
+  else { ratioMsg.className = 'msg'; ratioMsg.textContent = ''; }
+  $('ratio').setAttribute('aria-invalid', v.ratioErr ? 'true' : 'false');
+  $('advMsg').textContent = v.advErr;
+  $('maxHz').setAttribute('aria-invalid', v.advErr.includes('펄스') ? 'true' : 'false');
+  $('maxRpm').setAttribute('aria-invalid', v.advErr.includes('모터') ? 'true' : 'false');
+  if (v.advErr) $('adv').open = true;
+
+  if (v.ok) {
+    $('cPpr').textContent = nf(v.d.ppr, v.d.ppr % 1 ? 2 : 0);
+    $('cPpd').textContent = fmtSig(v.d.ppd);
+    $('cRes').textContent = fmtSig(v.d.res) + '°';
+    $('cMax').textContent = `${fmtSig(v.d.maxOut)} rpm (1회전 ${fmtDuration(v.d.secPerRev)})`;
+    $('cMove').textContent = `${fmtSig(v.d.moveOut)} rpm`;
+  } else {
+    for (const id of ['cPpr', 'cPpd', 'cRes', 'cMax', 'cMove']) $(id).textContent = '-';
+  }
+  try { localStorage.setItem('gt.form', JSON.stringify(f)); } catch (e) { /* 저장 못 해도 괜찮음 */ }
+  renderApply();
+}
+
+function renderApply() {
+  const v = app.lastV;
+  const btn = $('btnApply'), st = $('applyState');
+  const moving = app.st && (app.st.mode === 'J' || app.st.mode === 'M');
+  btn.disabled = !app.connected || !v || !v.ok || moving;
+  let text = '', kind = '';
+  if (!app.connected) text = '연결하면 적용할 수 있어요.';
+  else if (!v || !v.ok) text = '입력값을 고치면 적용할 수 있어요.';
+  else if (moving) text = '모터가 멈추면 적용할 수 있어요.';
+  else if (!app.devCfg || !app.devCfg.applied) { text = '아직 적용 전이에요. 적용을 눌러야 조이스틱이 움직여요.'; kind = 'pending'; }
+  else if (sameCfg(v.cfg, app.devCfg)) { text = '기기에 적용됨'; kind = 'ok'; }
+  else { text = '바뀐 값이 있어요. 적용을 눌러야 기기에 반영돼요.'; kind = 'pending'; }
+  st.textContent = text;
+  st.dataset.kind = kind;
+}
+
+function fillForm(c) {
+  const g = document.querySelector(`input[name="gear"][value="${c.gear}"]`);
+  if (g) g.checked = true;
+  app.lastGear = c.gear;
+  $('ratio').value = String(c.ratio);
+  $('micro').value = String(c.micro);
+  $('spr').value = String(c.spr);
+  $('rev').checked = c.rev;
+  const s = document.querySelector(`input[name="step"][value="${c.step}"]`);
+  if (s) s.checked = true;
+  $('maxHz').value = String(c.maxHz);
+  $('maxRpm').value = String(c.maxRpm);
+  onFormChange(false);
+}
+
+function setConnState(state, info) {
+  const conn = $('conn'), txt = $('connText'), btn = $('btnConnect'), demo = $('btnDemo');
+  conn.dataset.state = state;
+  if (state === 'connecting') { txt.textContent = '연결 중…'; btn.disabled = true; }
+  else if (state === 'reconnecting') { txt.textContent = `연결이 끊겨 다시 연결하는 중 (${info}/3)`; btn.disabled = true; app.connected = false; }
+  else if (state === 'connected' || state === 'demo') {
+    app.connected = true;
+    txt.textContent = state === 'demo' ? '데모 기기에 연결됨' : `${info}에 연결됨`;
+    btn.disabled = state === 'demo';
+    btn.textContent = state === 'demo' ? '연결' : '연결 끊기';
+    demo.textContent = state === 'demo' ? '데모 끝내기' : '데모 보기';
+    demo.disabled = state !== 'demo';
+    log(state === 'demo' ? '데모 기기에 연결했어요.' : `${info}에 연결했어요.`, 'ok');
+  } else {
+    const wasConnected = app.connected;
+    app.connected = false; app.devCfg = null; app.st = null;
+    txt.textContent = info === 'lost' ? '연결이 끊겼어요' : '연결 안 됨';
+    btn.disabled = !bleUsable(); btn.textContent = '연결';
+    demo.disabled = false; demo.textContent = '데모 보기';
+    if (app.demo) { app.demo = false; $('joyPad').classList.remove('interactive'); $('demoKeys').hidden = true; }
+    app.link = null;
+    if (info === 'lost') log('기기와 연결이 끊겼어요. 전원과 거리를 확인하고 다시 연결하세요.', 'err');
+    else if (wasConnected) log('연결을 끊었어요.');
+    renderLive();
+  }
+  renderApply();
+  renderButtons();
+}
+
+function parseCfg(p) {
+  return { gear: p[1], ratio: Number(p[2]), micro: Number(p[3]), spr: Number(p[4]), rev: p[5] === '1', maxHz: Number(p[6]), maxRpm: Number(p[7]), step: Number(p[8]), applied: p[9] === '1', fw: p[10] || '' };
+}
+
+function onLine(line) {
+  const p = line.split(' ');
+  switch (p[0]) {
+    case 'CFG': {
+      if (p.length < 11) return;
+      const c = parseCfg(p);
+      const first = !app.devCfg;
+      app.devCfg = c;
+      if (first && app.pristine) fillForm(c);
+      if (first) log(`기기 정보를 받았어요 (펌웨어 ${c.fw}).`);
+      renderApply();
+      break;
+    }
+    case 'ST': {
+      if (p.length < 9) return;
+      app.st = { mode: p[1], pos: Number(p[2]), tgt: Number(p[3]), rpm: Number(p[4]), jx: Number(p[5]), jy: Number(p[6]), btn: p[7] === '1', steps: Number(p[8]) };
+      renderLive();
+      break;
+    }
+    case 'OK': {
+      const what = p[1];
+      if (what === 'SET') log('설정을 기기에 적용했어요. 조이스틱을 쓸 수 있어요.', 'ok');
+      else if (what === 'ZERO') log('지금 위치를 0°로 잡았어요.', 'ok');
+      else if (what === 'STOP') log('정지 명령을 보냈어요.');
+      else if (what === 'FREE') log(app.st && app.st.mode === 'F' ? '모터 힘을 풀었어요.' : '모터를 고정했어요.');
+      break;
+    }
+    case 'ERR': log(ERR_TEXT[p[1]] || ('기기 오류: ' + p.slice(1).join(' ')), 'err'); break;
+    case 'EVT': { const e = EVT_TEXT[p[1]]; log(e ? e[0] : '기기 알림: ' + p.slice(1).join(' '), e ? e[1] : ''); break; }
+    default: break;
+  }
+}
+
+function renderLive() {
+  const s = app.st;
+  const chip = $('modeChip');
+  if (!app.connected || !s) {
+    chip.dataset.mode = ''; $('modeText').textContent = app.connected ? '상태 받는 중…' : '연결 안 됨';
+    $('rNow').textContent = '-'; $('rTurns').textContent = '현재 위치'; $('rTgt').textContent = '-'; $('rRpm').textContent = '-'; $('rSteps').textContent = '-';
+    $('lock').hidden = true; drawWheel(0, NaN); setJoyBall(0, 0, false); renderButtons();
+    return;
+  }
+  chip.dataset.mode = s.mode;
+  $('modeText').textContent = MODE_TEXT[s.mode] || s.mode;
+  $('rNow').textContent = `${nf(s.pos, 3)}°`;
+  const turns = Math.trunc(s.pos / 360);
+  const rest = s.pos - turns * 360;
+  $('rTurns').textContent = turns ? `${turns > 0 ? '+' : ''}${turns}바퀴 ${rest >= 0 ? '+' : ''}${nf(rest, 3)}°` : '현재 위치';
+  $('rTgt').textContent = `${s.tgt > 0 ? '+' : ''}${fmtAngle(s.tgt)}°`;
+  const ar = Math.abs(s.rpm);
+  const dir = s.rpm > 0.0005 ? '정방향' : s.rpm < -0.0005 ? '역방향' : '';
+  $('rRpm').innerHTML = `${ar < 0.0005 ? '0' : fmtSig(ar)}<small>rpm${dir ? ' ' + dir : ''}</small>`;
+  $('rSteps').textContent = nf(s.steps, 0);
+  $('lock').hidden = s.mode !== 'L';
+  drawWheel(s.pos, s.tgt);
+  if (!app.demo) setJoyBall(s.jx, s.jy, s.btn);
+  renderButtons();
+  renderApply();
+}
+
+function renderButtons() {
+  const s = app.st, on = app.connected && !!s;
+  const moving = on && (s.mode === 'J' || s.mode === 'M');
+  $('btnStop').disabled = !on;
+  $('btnZero').disabled = !on || moving;
+  $('btnFree').disabled = !on || moving;
+  $('btnFree').textContent = on && s.mode === 'F' ? '모터 고정' : '모터 힘 풀기';
+}
+
+function bluetoothBlockedByPage() {
+  // 이 화면(프레임)에서 블루투스가 허용되는지 브라우저에 물어봄
+  try {
+    const fp = document.permissionsPolicy || document.featurePolicy;
+    if (fp && typeof fp.features === 'function' && fp.features().includes('bluetooth')) return !fp.allowsFeature('bluetooth');
+  } catch (e) { /* 확인 못 하면 막히지 않은 것으로 봄 */ }
+  return false;
+}
+
+function bleUsable() {
+  return !!(navigator.bluetooth && window.isSecureContext && location.protocol !== 'file:' && !bluetoothBlockedByPage());
+}
+
+function showBanner() {
+  const b = $('banner');
+  let msg = '';
+  if (location.protocol === 'file:') msg = '파일을 직접 열면 블루투스 연결이 막혀요. GitHub Pages 주소(https://…)로 열어 주세요. 화면만 확인하려면 데모 보기를 누르세요.';
+  else if (!navigator.bluetooth) msg = '이 브라우저는 블루투스 연결을 지원하지 않아요. 크롬이나 엣지에서 열어 주세요. 화면만 확인하려면 데모 보기를 누르세요.';
+  else if (!window.isSecureContext) msg = '블루투스는 https 주소에서만 쓸 수 있어요.';
+  else if (bluetoothBlockedByPage()) msg = '이 화면에서는 브라우저가 블루투스 연결을 막고 있어요. 화면만 확인하려면 데모 보기를 누르세요.';
+  b.textContent = msg;
+  b.hidden = !msg;
+  $('btnConnect').disabled = !bleUsable();
+}
+
+async function connectBle() {
+  if (app.link) { await app.link.disconnect(); return; }
+  if (navigator.bluetooth.getAvailability) {
+    try {
+      if (!(await navigator.bluetooth.getAvailability())) { log('노트북 블루투스가 꺼져 있어요. 켜고 다시 연결하세요.', 'err'); return; }
+    } catch (e) { /* 확인 못 해도 계속 */ }
+  }
+  const link = new BleLink({ line: onLine, state: setConnState, error: (m) => log(m, 'err') });
+  app.link = link;
+  try {
+    await link.connect();
+  } catch (e) {
+    app.link = null;
+    const name = e && e.name;
+    if (name === 'NotFoundError') log('기기 선택을 취소했어요. 목록에 GearTester가 없으면 보드 전원을 확인하세요.');
+    else if (name === 'SecurityError') log('브라우저가 블루투스 연결을 막았어요. 크롬이나 엣지에서 열었는지 확인하세요.', 'err');
+    else log('연결하지 못했어요: ' + (e && e.message ? e.message : e), 'err');
+    setConnState('disconnected');
+  }
+}
+
+async function toggleDemo() {
+  if (app.demo && app.link) { await app.link.disconnect(); return; }
+  if (app.link) return;
+  app.demo = true;
+  app.link = new DemoLink({ line: onLine, state: setConnState, error: (m) => log(m, 'err') });
+  $('joyPad').classList.add('interactive');
+  $('demoKeys').hidden = false;
+  await app.link.connect();
+}
+
+function send(line) { if (app.link && app.connected) app.link.send(line); }
+
+function applySettings() {
+  const v = validate(readForm());
+  if (!v.ok) { onFormChange(false); return; }
+  const c = v.cfg;
+  send(`SET ${c.gear} ${c.ratioStr} ${c.micro} ${c.spr} ${c.rev ? 1 : 0} ${c.maxHz} ${c.maxRpm} ${c.step}`);
+}
+
+/* 데모 조이스틱: 그림을 끌거나 키보드로 조작 */
+function setupDemoJoystick() {
+  const pad = $('joyPad');
+  let dragging = false;
+  const fromEvent = (e) => {
+    const r = pad.getBoundingClientRect();
+    let x = ((e.clientX - r.left) / r.width - 0.5) * 2.4, y = -((e.clientY - r.top) / r.height - 0.5) * 2.4;
+    x = Math.max(-1, Math.min(1, x)); y = Math.max(-1, Math.min(1, y));
+    return [x, y];
+  };
+  const update = (x, y) => {
+    if (!app.demo || !app.link) return;
+    app.link.joy.x = x; app.link.joy.y = y;
+    setJoyBall(x, y, app.link.joy.btn);
+  };
+  pad.addEventListener('pointerdown', (e) => { if (!app.demo) return; dragging = true; pad.setPointerCapture(e.pointerId); update(...fromEvent(e)); });
+  pad.addEventListener('pointermove', (e) => { if (dragging) update(...fromEvent(e)); });
+  const end = () => { if (!dragging) return; dragging = false; update(0, 0); };
+  pad.addEventListener('pointerup', end);
+  pad.addEventListener('pointercancel', end);
+  pad.addEventListener('dblclick', () => press());
+  const keys = new Set();
+  const press = () => {
+    if (!app.demo || !app.link) return;
+    app.link.joy.btn = true; setJoyBall(app.link.joy.x, app.link.joy.y, true);
+    setTimeout(() => { if (app.link && app.link.joy) { app.link.joy.btn = false; setJoyBall(app.link.joy.x, app.link.joy.y, false); } }, 120);
+  };
+  const fromKeys = () => update((keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0), (keys.has('ArrowUp') ? 1 : 0) - (keys.has('ArrowDown') ? 1 : 0));
+  document.addEventListener('keydown', (e) => {
+    if (!app.demo || e.target.closest('input, select, textarea, button, summary')) return;
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) { e.preventDefault(); keys.add(e.key); fromKeys(); }
+    else if (e.key === ' ') { e.preventDefault(); if (!e.repeat) press(); }
+  });
+  document.addEventListener('keyup', (e) => { if (keys.delete(e.key)) fromKeys(); });
+}
+
+function init() {
+  buildTicks();
+  try {
+    const saved = JSON.parse(localStorage.getItem('gt.form') || 'null');
+    if (saved && typeof saved === 'object') {
+      const g = document.querySelector(`input[name="gear"][value="${saved.gear}"]`); if (g) g.checked = true;
+      if (typeof saved.ratioRaw === 'string') $('ratio').value = saved.ratioRaw;
+      if (DIP[saved.micro]) $('micro').value = String(saved.micro);
+      if (saved.spr === 200 || saved.spr === 400) $('spr').value = String(saved.spr);
+      $('rev').checked = !!saved.rev;
+      const s = document.querySelector(`input[name="step"][value="${saved.step}"]`); if (s) s.checked = true;
+      if (typeof saved.maxHzRaw === 'string') $('maxHz').value = saved.maxHzRaw;
+      if (typeof saved.maxRpmRaw === 'string') $('maxRpm').value = saved.maxRpmRaw;
+      app.lastGear = saved.gear || 'H';
+    }
+  } catch (e) { /* 저장값 없음 */ }
+  for (const el of document.querySelectorAll('input[name="gear"], input[name="step"], #micro, #spr, #rev')) el.addEventListener('change', () => onFormChange(true));
+  for (const id of ['ratio', 'maxHz', 'maxRpm']) $(id).addEventListener('input', () => onFormChange(true));
+  $('ratio').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !$('btnApply').disabled) applySettings(); });
+  $('btnApply').addEventListener('click', applySettings);
+  $('btnConnect').addEventListener('click', connectBle);
+  $('btnDemo').addEventListener('click', toggleDemo);
+  $('btnStop').addEventListener('click', () => send('STOP'));
+  $('btnZero').addEventListener('click', () => send('ZERO'));
+  $('btnFree').addEventListener('click', () => send(app.st && app.st.mode === 'F' ? 'FREE 0' : 'FREE 1'));
+  setupDemoJoystick();
+  showBanner();
+  onFormChange(false);
+  renderLive();
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+init();
+</script>
+</body>
+</html>
