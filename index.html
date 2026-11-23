@@ -142,13 +142,34 @@ select, .num {
 .num[aria-invalid="true"] { border-color: var(--red); background: var(--red-wash); }
 .inline { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
 
-/* DIP switch helper */
-.dip { display: inline-flex; gap: 6px; padding: 8px 10px; background: #2B323A; border-radius: var(--r-s); }
-.dip .sw { display: grid; justify-items: center; gap: 3px; color: #C9D1D9; font-size: 11px; font-weight: 600; }
-.dip .slot { width: 16px; height: 30px; background: #12171C; border-radius: 3px; position: relative; }
-.dip .knob { position: absolute; left: 2px; width: 12px; height: 13px; background: #F2F4F6; border-radius: 2px; top: 15px; transition: top .15s; }
-.dip .sw.on .knob { top: 2px; }
-.dip-caption { font-size: 13px; color: var(--ink-3); margin-top: 6px; }
+/* 드라이버 DIP 스위치: 실물처럼 빨간 몸체, 흰 손잡이, 아래가 ON */
+.dipwrap { display: inline-block; padding: 12px; background: #1E2226; border-radius: var(--r-m); }
+.dipbody { background: #E0344A; border-radius: 6px; padding: 10px 12px 8px; }
+.levers, .dipnums { display: flex; gap: 8px; }
+.lever {
+  width: 38px; height: 66px; padding: 0; border: 0; border-radius: 4px; cursor: pointer;
+  background: #B5182E; position: relative; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .35);
+}
+.lever .knob {
+  position: absolute; left: 5px; right: 5px; top: 5px; height: 28px;
+  background: #F4F4F2; border-radius: 3px; transition: top .12s;
+}
+.lever[aria-checked="true"] .knob { top: 33px; }
+.lever:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 2px; }
+.dipnums { margin-top: 6px; }
+.dipnums span { width: 38px; text-align: center; color: #FFFFFF; font-weight: 700; font-size: 17px; }
+.dipfoot { display: flex; justify-content: space-between; color: #FFFFFF; font-weight: 800; font-size: 15px; margin-top: 2px; }
+.dip-side { display: grid; gap: 8px; align-content: start; }
+.dip-side .unit { font-weight: 600; color: var(--ink-2); }
+.dip-pending { margin: 10px 0 0; color: var(--amber-ink); font-weight: 600; font-size: 14px; }
+.dip-pending[hidden] { display: none; }
+.dip-result { margin-top: 12px; padding: 12px 14px; border-radius: var(--r-s); background: var(--well); font-size: 15px; line-height: 1.6; }
+.dip-result:empty { display: none; }
+.dip-result strong { font-size: 17px; }
+.dip-alert { margin-top: 8px; padding: 11px 14px; border-radius: var(--r-s); font-size: 14.5px; line-height: 1.5; }
+.dip-alert.danger { background: var(--red-wash); color: var(--red-ink); border: 1px solid #E8A9A4; font-weight: 600; }
+.dip-alert.caution { background: var(--amber-wash); color: #5A4110; border: 1px solid #E8C873; }
+.dip-alert.info { background: var(--well); color: var(--ink-2); }
 
 .toggle { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 .toggle input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--blue); flex: none; }
@@ -253,7 +274,7 @@ kbd { font: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid var(--
   .actions { justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wheel .needle-g, .dip .knob { transition: none; }
+  .wheel .needle-g, .lever .knob { transition: none; }
 }
 </style>
 </head>
@@ -292,21 +313,25 @@ kbd { font: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid var(--
     </div>
 
     <div class="field">
-      <label class="label" for="micro">마이크로스텝</label>
+      <span class="label" id="lDip">드라이버 DIP 스위치</span>
+      <p class="help" style="margin:0 0 10px">드라이버 옆면 스위치와 똑같이 눌러서 맞추고 확인을 누르세요. 손잡이가 아래로 가면 ON이에요.</p>
       <div class="inline">
-        <select id="micro">
-          <option value="1">1 (풀스텝)</option>
-          <option value="2">1/2 (2/A, 2/B)</option>
-          <option value="4">1/4</option>
-          <option value="8">1/8</option>
-          <option value="16" selected>1/16</option>
-          <option value="32">1/32</option>
-        </select>
-        <div>
-          <div class="dip" id="dip" aria-hidden="true"></div>
-          <div class="dip-caption" id="dipText"></div>
+        <div class="dipwrap">
+          <div class="dipbody" role="group" aria-labelledby="lDip">
+            <div class="levers" id="levers"></div>
+            <div class="dipnums" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
+            <div class="dipfoot" aria-hidden="true"><span>ON↓</span><span>DIP</span></div>
+          </div>
+        </div>
+        <div class="dip-side">
+          <label class="label" for="rated" style="margin:0">모터 정격 전류 (모터 라벨 값)</label>
+          <div><input class="num" id="rated" type="text" inputmode="decimal" placeholder="예: 1.5" style="width:96px"> <span class="unit">A</span></div>
+          <button class="btn" id="btnDip" type="button">확인</button>
         </div>
       </div>
+      <p class="dip-pending" id="dipPending" hidden>스위치를 바꿨어요. 확인을 눌러야 반영돼요.</p>
+      <div class="dip-result" id="dipResult" aria-live="polite"></div>
+      <div id="dipAlerts" aria-live="polite"></div>
     </div>
 
     <div class="field">
@@ -342,10 +367,15 @@ kbd { font: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid var(--
         </div>
         <div>
           <label class="label" for="maxRpm" style="display:block;font-size:14px;font-weight:600;color:var(--ink-2);margin-bottom:6px">모터 최고 속도 (rpm)</label>
-          <input class="num" id="maxRpm" type="text" inputmode="decimal" value="600" aria-describedby="advMsg">
+          <input class="num" id="maxRpm" type="text" inputmode="decimal" value="300" aria-describedby="advMsg">
+        </div>
+        <div>
+          <label class="label" for="acc" style="display:block;font-size:14px;font-weight:600;color:var(--ink-2);margin-bottom:6px">가속도 (rpm/초)</label>
+          <input class="num" id="acc" type="text" inputmode="decimal" value="600" aria-describedby="advMsg accHelp">
         </div>
       </div>
-      <p class="help">모터가 소리만 나고 돌지 않으면 최대 펄스 속도를 10000으로 낮춰 보세요.</p>
+      <p class="help" id="accHelp">탈조가 나면(소리만 나고 안 돌거나, 왕복했는데 위치가 밀리면) 모터 최고 속도와 가속도를 낮추고, 위 DIP 스위치에서 드라이버 전류를 모터 정격에 맞추세요.</p>
+      <p class="help" id="accNote" hidden>연결된 기기의 펌웨어가 예전 버전이라 가속도는 보내지 않아요. 펌웨어 1.1.0을 올리면 가속도와 탈조 방지 기능을 쓸 수 있어요.</p>
       <p class="msg error" id="advMsg" aria-live="polite"></p>
     </details>
 
@@ -355,6 +385,7 @@ kbd { font: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid var(--
       <dt>1펄스에 움직이는 각도</dt><dd id="cRes">-</dd>
       <dt>최고 출력 속도</dt><dd id="cMax">-</dd>
       <dt>각도 이동 속도</dt><dd id="cMove">-</dd>
+      <dt>최고 속도까지</dt><dd id="cRamp">-</dd>
     </dl>
 
     <div class="apply-row">
@@ -442,12 +473,23 @@ const PRESETS = {
   P: [3, 4, 5, 5.18, 7, 10, 13.73, 15, 20, 26.85, 50, 100],
   C: []
 };
-const DIP = { 1: ['ON', 'ON', 'OFF'], 2: ['ON', 'OFF', 'ON'], 4: ['ON', 'OFF', 'OFF'], 8: ['OFF', 'ON', 'OFF'], 16: ['OFF', 'OFF', 'ON'], 32: ['OFF', 'OFF', 'OFF'] };
+// 드라이버에 인쇄된 표 그대로 (SW1,SW2,SW3 / SW4,SW5,SW6)
+const MICRO_BY_DIP = {
+  'ON,ON,ON': null,
+  'ON,ON,OFF': [1, '1 (풀스텝)'], 'ON,OFF,ON': [2, '1/2 (2/A)'], 'OFF,ON,ON': [2, '1/2 (2/B)'],
+  'ON,OFF,OFF': [4, '1/4'], 'OFF,ON,OFF': [8, '1/8'], 'OFF,OFF,ON': [16, '1/16'], 'OFF,OFF,OFF': [32, '1/32']
+};
+const CURRENT_BY_DIP = {
+  'ON,ON,ON': [0.5, 0.7], 'ON,OFF,ON': [1.0, 1.2], 'ON,ON,OFF': [1.5, 1.7], 'ON,OFF,OFF': [2.0, 2.2],
+  'OFF,ON,ON': [2.5, 2.7], 'OFF,OFF,ON': [2.8, 2.9], 'OFF,ON,OFF': [3.0, 3.2], 'OFF,OFF,OFF': [3.5, 4.0]
+};
+const DIP_FOR_MICRO = { 1: [true, true, false], 2: [true, false, true], 4: [true, false, false], 8: [false, true, false], 16: [false, false, true], 32: [false, false, false] };
 const MODE_TEXT = { L: '잠김 (적용 전)', F: '모터 힘 풀림', I: '대기', J: '수동 회전', M: '각도 이동 중' };
 const ERR_TEXT = {
   RATIO_NAN: '감속비가 숫자가 아니에요.', RATIO_LE0: '감속비는 0보다 커야 해요.', RATIO_LT1: '1보다 작은 값은 감속이 아니라 증속이에요.',
   RATIO_BIG: '감속비가 너무 커서 기기가 위치를 계산할 수 없어요.', MICRO: '마이크로스텝 값이 올바르지 않아요.', SPR: '모터 스텝 수가 올바르지 않아요.',
   MAXHZ: '최대 펄스 속도는 100~200000 Hz 사이여야 해요.', MAXRPM: '모터 최고 속도는 1~3000 rpm 사이여야 해요.', STEP: '각도 조정 단위가 올바르지 않아요.',
+  ACC: '가속도는 30~6000 rpm/초 사이여야 해요.',
   GEAR: '감속기 종류가 올바르지 않아요.', BUSY: '모터가 움직이는 중이에요. 멈춘 뒤 다시 하세요.', FMT: '기기가 명령을 이해하지 못했어요. 펌웨어 버전을 확인하세요.'
 };
 const EVT_TEXT = {
@@ -498,17 +540,22 @@ function readForm() {
   return {
     gear: document.querySelector('input[name="gear"]:checked').value,
     ratioRaw: $('ratio').value,
-    micro: Number($('micro').value),
+    micro: app.dipConf && app.dipConf.micro ? app.dipConf.micro : NaN,
     spr: Number($('spr').value),
     rev: $('rev').checked,
     step: Number(document.querySelector('input[name="step"]:checked').value),
     maxHzRaw: $('maxHz').value,
-    maxRpmRaw: $('maxRpm').value
+    maxRpmRaw: $('maxRpm').value,
+    accRaw: $('acc').value
   };
 }
 
 function validate(f) {
-  const out = { ok: false, ratioErr: '', advErr: '', warns: [], cfg: null, d: null };
+  const out = { ok: false, ratioErr: '', advErr: '', dipErr: '', warns: [], cfg: null, d: null };
+  if (!DIP_FOR_MICRO[f.micro]) {
+    out.dipErr = 'DIP 스위치 1~3번이 마이크로스텝 설정이 아니에요(NC). 원하는 값으로 바꾸고 확인을 누르세요.';
+    return out;
+  }
   const perRev = f.spr * f.micro;
   const maxRatio = MAX_PPR / perRev;
 
@@ -516,8 +563,11 @@ function validate(f) {
   const maxHz = /^\d+$/.test(hzT) ? Number(hzT) : NaN;
   const rpmT = String(f.maxRpmRaw).trim();
   const maxRpm = /^(\d+\.?\d*|\.\d+)$/.test(rpmT) ? Number(rpmT) : NaN;
+  const accT = String(f.accRaw === undefined ? '600' : f.accRaw).trim();
+  const acc = /^(\d+\.?\d*|\.\d+)$/.test(accT) ? Number(accT) : NaN;
   if (!(maxHz >= 100 && maxHz <= 200000)) out.advErr = '최대 펄스 속도는 100~200000 사이의 정수로 입력하세요.';
   else if (!(maxRpm >= 1 && maxRpm <= 3000)) out.advErr = '모터 최고 속도는 1~3000 사이로 입력하세요.';
+  else if (!(acc >= 30 && acc <= 6000)) out.advErr = '가속도는 30~6000 rpm/초 사이로 입력하세요.';
 
   const r = parseRatio(f.ratioRaw);
   if (r.err === 'EMPTY') out.ratioErr = '감속비를 입력하세요.';
@@ -535,14 +585,14 @@ function validate(f) {
   const ppr = perRev * ratio;
   const allowedHz = Math.max(1, Math.min(maxHz, maxRpm / 60 * perRev));
   const maxOut = allowedHz / ppr * 60;
-  const d = { ppr, ppd: ppr / 360, res: 360 / ppr, maxOut, moveOut: maxOut * MOVE_FRAC, secPerRev: 60 / maxOut };
+  const d = { ppr, ppd: ppr / 360, res: 360 / ppr, maxOut, moveOut: maxOut * MOVE_FRAC, secPerRev: 60 / maxOut, rampSec: allowedHz / perRev * 60 / acc };
   if (f.gear === 'H' && ratio < 30) out.warns.push('하모닉 감속기는 보통 30:1 이상이에요. 값이 맞는지 확인하세요.');
   if (f.gear === 'P' && ratio > 1000) out.warns.push('유성 감속기에서는 흔치 않은 값이에요. 값이 맞는지 확인하세요.');
   if (d.secPerRev > 600) out.warns.push(`최고 속도로 돌려도 출력축 1회전에 ${fmtDuration(d.secPerRev)} 걸려요.`);
   if (d.res > f.step / 2) out.warns.push(`1펄스에 ${fmtSig(d.res)}°씩 움직여서 ${f.step}° 단위로 정확히 맞추기 어려워요. 마이크로스텝을 올리세요.`);
   out.ok = true;
   out.d = d;
-  out.cfg = { gear: f.gear, ratio, ratioStr: String(ratio), micro: f.micro, spr: f.spr, rev: f.rev, maxHz, maxRpm, step: f.step };
+  out.cfg = { gear: f.gear, ratio, ratioStr: String(ratio), micro: f.micro, spr: f.spr, rev: f.rev, maxHz, maxRpm, step: f.step, acc };
   return out;
 }
 
@@ -550,7 +600,8 @@ function sameCfg(a, b) {
   if (!a || !b) return false;
   const near = (x, y) => Math.abs(x - y) <= 1e-9 * Math.max(1, Math.abs(x), Math.abs(y));
   return a.gear === b.gear && near(a.ratio, b.ratio) && a.micro === b.micro && a.spr === b.spr &&
-    a.rev === b.rev && a.maxHz === b.maxHz && near(a.maxRpm, b.maxRpm) && near(a.step, b.step);
+    a.rev === b.rev && a.maxHz === b.maxHz && near(a.maxRpm, b.maxRpm) && near(a.step, b.step) &&
+    (a.acc === undefined || b.acc === undefined || near(a.acc, b.acc));  // 예전 펌웨어는 가속도를 모름
 }
 
 /* ───────────── 블루투스 연결 ───────────── */
@@ -632,7 +683,7 @@ class BleLink {
 class DemoDevice {
   constructor(emit) {
     this.emit = emit;
-    this.cfg = { gear: 'H', ratio: 100, micro: 16, spr: 200, rev: true, maxHz: 20000, maxRpm: 600, step: 1 };
+    this.cfg = { gear: 'H', ratio: 100, micro: 16, spr: 200, rev: true, maxHz: 20000, maxRpm: 300, step: 1, acc: 600 };
     this.applied = false; this.freeReq = false; this.mode = 'L';
     this.tgt = 90; this.cmdDeg = 0; this.pos = 0; this.vel = 0; this.kind = 'idle'; this.runDir = 0; this.target = 0; this.speed = 1000;
     this.jx = 0; this.jy = 0; this.btn = false; this.latch = false; this.jogDir = 0; this.stopping = false; this.abort = false;
@@ -642,9 +693,9 @@ class DemoDevice {
   perRev() { return this.cfg.spr * this.cfg.micro; }
   ppd() { return this.perRev() * this.cfg.ratio / 360; }
   allowedHz() { return Math.max(1, Math.min(this.cfg.maxHz, this.cfg.maxRpm / 60 * this.perRev())); }
-  accel() { return Math.min(2e6, Math.max(100, 20 * this.perRev())); }
+  accel() { return Math.min(2e6, Math.max(100, this.cfg.acc / 60 * this.perRev())); }
   deg() { return this.sign() * Math.round(this.pos) / this.ppd() + 0; }
-  cfgLine() { const c = this.cfg; return `CFG ${c.gear} ${c.ratio} ${c.micro} ${c.spr} ${c.rev ? 1 : 0} ${c.maxHz} ${c.maxRpm} ${c.step} ${this.applied ? 1 : 0} demo`; }
+  cfgLine() { const c = this.cfg; return `CFG ${c.gear} ${c.ratio} ${c.micro} ${c.spr} ${c.rev ? 1 : 0} ${c.maxHz} ${c.maxRpm} ${c.step} ${this.applied ? 1 : 0} demo ${c.acc}`; }
   stLine() { return `ST ${this.mode} ${this.deg().toFixed(3)} ${this.tgt.toFixed(2)} ${this.rpm.toFixed(3)} ${this.jx.toFixed(2)} ${this.jy.toFixed(2)} ${this.btn ? 1 : 0} ${Math.round(this.pos)}`; }
   running() { return this.kind !== 'idle'; }
   receive(line) {
@@ -653,10 +704,11 @@ class DemoDevice {
     if (cmd === 'HELLO') { this.emit(this.cfgLine()); this.emit(this.stLine()); }
     else if (cmd === 'SET') {
       if (busy) return this.emit('ERR BUSY');
-      if (a.length !== 8) return this.emit('ERR FMT');
-      const v = validate({ gear: a[0], ratioRaw: a[1], micro: Number(a[2]), spr: Number(a[3]), rev: a[4] === '1', step: Number(a[7]), maxHzRaw: a[5], maxRpmRaw: a[6] });
-      if (!v.ok) return this.emit('ERR ' + (v.advErr ? 'MAXHZ' : 'RATIO_NAN'));
-      this.cfg = { gear: a[0], ratio: Number(a[1]), micro: Number(a[2]), spr: Number(a[3]), rev: a[4] === '1', maxHz: Number(a[5]), maxRpm: Number(a[6]), step: Number(a[7]) };
+      if (a.length !== 8 && a.length !== 9) return this.emit('ERR FMT');
+      const accRaw = a.length === 9 ? a[8] : String(this.cfg.acc);
+      const v = validate({ gear: a[0], ratioRaw: a[1], micro: Number(a[2]), spr: Number(a[3]), rev: a[4] === '1', step: Number(a[7]), maxHzRaw: a[5], maxRpmRaw: a[6], accRaw });
+      if (!v.ok) return this.emit('ERR ' + (v.dipErr ? 'MICRO' : v.advErr.includes('가속도') ? 'ACC' : v.advErr.includes('모터') ? 'MAXRPM' : v.advErr ? 'MAXHZ' : 'RATIO_NAN'));
+      this.cfg = { gear: a[0], ratio: Number(a[1]), micro: Number(a[2]), spr: Number(a[3]), rev: a[4] === '1', maxHz: Number(a[5]), maxRpm: Number(a[6]), step: Number(a[7]), acc: Number(accRaw) };
       this.pos = 0; this.cmdDeg = 0; this.applied = true; this.latch = true;
       this.mode = this.freeReq ? 'F' : 'I';
       this.emit('OK SET'); this.emit(this.cfgLine()); this.emit(this.stLine());
@@ -765,7 +817,8 @@ class DemoLink {
 
 /* ───────────── 화면 ───────────── */
 const app = {
-  link: null, connected: false, demo: false, devCfg: null, st: null, pristine: true, lastGear: 'H', lastV: null
+  link: null, connected: false, demo: false, devCfg: null, st: null, pristine: true, lastGear: 'H', lastV: null,
+  dip: [false, false, true, true, false, true], dipConf: null, dipDirty: false
 };
 
 function log(text, kind = '') {
@@ -832,10 +885,94 @@ function setJoyBall(x, y, pressed) {
   $('joyPad').classList.toggle('pressed', !!pressed);
 }
 
-function renderDip(micro) {
-  const sw = DIP[micro] || ['?', '?', '?'];
-  $('dip').innerHTML = sw.map((s, i) => `<div class="sw ${s === 'ON' ? 'on' : ''}"><span>${s}</span><div class="slot"><div class="knob"></div></div><span>SW${i + 1}</span></div>`).join('');
-  $('dipText').textContent = `드라이버 DIP 스위치: SW1 ${sw[0]}, SW2 ${sw[1]}, SW3 ${sw[2]}`;
+const dipKey = (arr) => arr.map((b) => (b ? 'ON' : 'OFF')).join(',');
+const amp = (v) => v.toFixed(1) + 'A';
+const knobWords = (key) => key.split(',').map((x) => (x === 'ON' ? '아래' : '위')).join(', ');  // 이 드라이버는 손잡이가 아래면 ON
+
+function parseRated() {
+  const t = String($('rated').value).trim();
+  return /^(\d+\.?\d*|\.\d+)$/.test(t) ? Number(t) : NaN;
+}
+
+function evaluateDip(dip) {
+  const m = MICRO_BY_DIP[dipKey(dip.slice(0, 3))];
+  const c = CURRENT_BY_DIP[dipKey(dip.slice(3))];
+  const rated = parseRated();
+  const alerts = [];
+  if (!m) alerts.push(['danger', '1~3번이 모두 ON이면 드라이버가 모터를 돌리지 않는 설정(NC)이에요. 원하는 마이크로스텝으로 바꾸세요.']);
+  if (rated > 0) {
+    // 모터 정격을 넘지 않는 가장 센 설정
+    const fit = Object.entries(CURRENT_BY_DIP).filter(([, v]) => v[0] <= rated + 1e-9).sort((a, b) => b[1][0] - a[1][0])[0];
+    const fitText = fit ? `${fit[0].split(',').join(', ')}로 바꿔 ${amp(fit[1][0])}로 맞추세요(손잡이 ${knobWords(fit[0])})` : '';
+    if (c[0] > rated + 1e-9) {
+      alerts.push(['danger', `이 설정은 모터에 부하가 걸릴 수 있어요. 드라이버 전류 ${amp(c[0])}가 모터 정격 ${rated}A보다 높아서 모터가 뜨거워지고 수명이 줄어요.` +
+        (fit ? ` 4~6번을 ${fitText}.` : ' 이 드라이버의 가장 낮은 전류(0.5A)보다도 정격이 낮아요.')]);
+    } else if (fit && fit[1][0] > c[0] + 1e-9) {
+      alerts.push(['info', (c[0] < rated * 0.5 ? '전류가 모터 정격의 절반도 안 돼서 감속기에 부하가 걸리면 탈조가 날 수 있어요. ' : '') +
+        `모터 힘을 더 내려면 4~6번을 ${fitText}. 모터 정격 안쪽이라 괜찮아요.`]);
+    }
+  } else if (c[0] >= 2.5) {
+    alerts.push(['danger', `이 설정은 모터에 부하가 걸릴 수 있어요. NEMA17은 대부분 정격이 2A 이하라서 ${amp(c[0])}는 너무 높아요. 모터 정격 전류를 입력하면 맞는 설정을 알려 드려요.`]);
+  } else if (c[0] >= 2.0) {
+    alerts.push(['caution', `모터 라벨의 정격이 ${amp(c[0])} 이상인지 확인하세요. 정격보다 높으면 모터가 뜨거워져요. 모터 정격 전류를 입력하면 바로 확인해 드려요.`]);
+  } else if (c[0] <= 0.5) {
+    alerts.push(['info', '전류가 낮아서 감속기에 부하가 걸리면 모터가 미끄러질(탈조) 수 있어요.']);
+  }
+  if (m && m[0] <= 2) alerts.push(['info', '풀스텝과 1/2은 진동과 소리가 커서 감속기 상태를 보기 어려울 수 있어요. 1/8 이상을 권해요.']);
+  if (m && m[0] === 32) {
+    const hz = Number(String($('maxHz').value).trim()), rpm = Number(String($('maxRpm').value).trim());
+    const spr = Number($('spr').value);
+    if (hz > 0 && rpm > 0) alerts.push(['info', `1/32에서는 모터 최고 속도가 약 ${nf(Math.min(hz / (spr * 32) * 60, rpm), 0)} rpm으로 낮아져요.`]);
+  }
+  return { micro: m ? m[0] : null, microLabel: m ? m[1] : null, cur: c[0], pk: c[1], alerts };
+}
+
+function renderLevers() {
+  const box = $('levers');
+  if (!box.children.length) {
+    for (let i = 0; i < 6; i++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lever';
+      b.setAttribute('role', 'switch');
+      b.append(Object.assign(document.createElement('span'), { className: 'knob' }));
+      b.addEventListener('click', () => {
+        app.dip[i] = !app.dip[i];
+        app.dipDirty = true;
+        onFormChange(true);
+      });
+      box.append(b);
+    }
+  }
+  [...box.children].forEach((b, i) => {
+    b.setAttribute('aria-checked', app.dip[i] ? 'true' : 'false');
+    b.setAttribute('aria-label', `${i + 1}번 스위치 ${app.dip[i] ? 'ON' : 'OFF'}`);
+  });
+  $('dipPending').hidden = !app.dipDirty;
+}
+
+function renderDipResult() {
+  const r = app.dipConf, res = $('dipResult'), al = $('dipAlerts');
+  res.textContent = '';
+  al.textContent = '';
+  if (!r) return;
+  const head = document.createElement('strong');
+  head.textContent = r.micro ? `마이크로스텝 ${r.microLabel}` : '마이크로스텝 없음 (NC)';
+  res.append(head);
+  if (r.micro) res.append(` (모터 1회전 ${nf(Number($('spr').value) * r.micro, 0)}펄스)`);
+  res.append(document.createElement('br'), `전류 ${amp(r.cur)} (최대 ${amp(r.pk)})`);
+  for (const [kind, msg] of r.alerts) {
+    const d = document.createElement('div');
+    d.className = 'dip-alert ' + kind;
+    d.textContent = (kind === 'danger' ? '⚠ ' : '') + msg;
+    al.append(d);
+  }
+}
+
+function confirmDip(user) {
+  app.dipConf = evaluateDip(app.dip);
+  app.dipDirty = false;
+  onFormChange(user);
 }
 
 function renderChips(gear, ratioStr) {
@@ -874,7 +1011,9 @@ function onFormChange(user = true) {
   const v = validate(readForm());
   app.lastV = v;
   renderChips(f.gear, f.ratioRaw);
-  renderDip(f.micro);
+  renderLevers();
+  if (app.dipConf && !app.dipDirty) app.dipConf = evaluateDip(app.dip);  // 정격 전류·속도 값이 바뀌면 경고도 다시 계산
+  renderDipResult();
   $('revHelp').textContent = revHelpText(f.gear);
 
   const ratioMsg = $('ratioMsg');
@@ -885,6 +1024,7 @@ function onFormChange(user = true) {
   $('advMsg').textContent = v.advErr;
   $('maxHz').setAttribute('aria-invalid', v.advErr.includes('펄스') ? 'true' : 'false');
   $('maxRpm').setAttribute('aria-invalid', v.advErr.includes('모터') ? 'true' : 'false');
+  $('acc').setAttribute('aria-invalid', v.advErr.includes('가속도') ? 'true' : 'false');
   if (v.advErr) $('adv').open = true;
 
   if (v.ok) {
@@ -893,10 +1033,11 @@ function onFormChange(user = true) {
     $('cRes').textContent = fmtSig(v.d.res) + '°';
     $('cMax').textContent = `${fmtSig(v.d.maxOut)} rpm (1회전 ${fmtDuration(v.d.secPerRev)})`;
     $('cMove').textContent = `${fmtSig(v.d.moveOut)} rpm`;
+    $('cRamp').textContent = `약 ${fmtDuration(v.d.rampSec)}`;
   } else {
-    for (const id of ['cPpr', 'cPpd', 'cRes', 'cMax', 'cMove']) $(id).textContent = '-';
+    for (const id of ['cPpr', 'cPpd', 'cRes', 'cMax', 'cMove', 'cRamp']) $(id).textContent = '-';
   }
-  try { localStorage.setItem('gt.form', JSON.stringify(f)); } catch (e) { /* 저장 못 해도 괜찮음 */ }
+  try { localStorage.setItem('gt.form', JSON.stringify({ ...f, v: 2, dip: app.dip, rated: $('rated').value })); } catch (e) { /* 저장 못 해도 괜찮음 */ }
   renderApply();
 }
 
@@ -904,9 +1045,11 @@ function renderApply() {
   const v = app.lastV;
   const btn = $('btnApply'), st = $('applyState');
   const moving = app.st && (app.st.mode === 'J' || app.st.mode === 'M');
-  btn.disabled = !app.connected || !v || !v.ok || moving;
+  btn.disabled = !app.connected || !v || !v.ok || moving || app.dipDirty;
   let text = '', kind = '';
   if (!app.connected) text = '연결하면 적용할 수 있어요.';
+  else if (app.dipDirty) { text = 'DIP 스위치를 바꿨어요. 확인을 누르면 적용할 수 있어요.'; kind = 'pending'; }
+  else if (v && v.dipErr) { text = v.dipErr; kind = 'pending'; }
   else if (!v || !v.ok) text = '입력값을 고치면 적용할 수 있어요.';
   else if (moving) text = '모터가 멈추면 적용할 수 있어요.';
   else if (!app.devCfg || !app.devCfg.applied) { text = '아직 적용 전이에요. 적용을 눌러야 조이스틱이 움직여요.'; kind = 'pending'; }
@@ -921,13 +1064,18 @@ function fillForm(c) {
   if (g) g.checked = true;
   app.lastGear = c.gear;
   $('ratio').value = String(c.ratio);
-  $('micro').value = String(c.micro);
+  if (DIP_FOR_MICRO[c.micro] && !(app.dipConf && app.dipConf.micro === c.micro)) {
+    app.dip.splice(0, 3, ...DIP_FOR_MICRO[c.micro]);
+  }
+  app.dipConf = evaluateDip(app.dip);
+  app.dipDirty = false;
   $('spr').value = String(c.spr);
   $('rev').checked = c.rev;
   const s = document.querySelector(`input[name="step"][value="${c.step}"]`);
   if (s) s.checked = true;
   $('maxHz').value = String(c.maxHz);
   $('maxRpm').value = String(c.maxRpm);
+  if (c.acc !== undefined) $('acc').value = String(c.acc);
   onFormChange(false);
 }
 
@@ -947,6 +1095,7 @@ function setConnState(state, info) {
   } else {
     const wasConnected = app.connected;
     app.connected = false; app.devCfg = null; app.st = null;
+    $('accNote').hidden = true;
     txt.textContent = info === 'lost' ? '연결이 끊겼어요' : '연결 안 됨';
     btn.disabled = !bleUsable(); btn.textContent = '연결';
     demo.disabled = false; demo.textContent = '데모 보기';
@@ -961,7 +1110,8 @@ function setConnState(state, info) {
 }
 
 function parseCfg(p) {
-  return { gear: p[1], ratio: Number(p[2]), micro: Number(p[3]), spr: Number(p[4]), rev: p[5] === '1', maxHz: Number(p[6]), maxRpm: Number(p[7]), step: Number(p[8]), applied: p[9] === '1', fw: p[10] || '' };
+  return { gear: p[1], ratio: Number(p[2]), micro: Number(p[3]), spr: Number(p[4]), rev: p[5] === '1', maxHz: Number(p[6]), maxRpm: Number(p[7]), step: Number(p[8]), applied: p[9] === '1', fw: p[10] || '',
+    acc: p.length >= 12 && Number.isFinite(Number(p[11])) ? Number(p[11]) : undefined };  // 1.0.0 펌웨어는 가속도를 안 보냄
 }
 
 function onLine(line) {
@@ -974,6 +1124,8 @@ function onLine(line) {
       app.devCfg = c;
       if (first && app.pristine) fillForm(c);
       if (first) log(`기기 정보를 받았어요 (펌웨어 ${c.fw}).`);
+      $('accNote').hidden = c.acc !== undefined;
+      if (first && c.acc === undefined) log('이 기기 펌웨어는 예전 버전이라 가속도를 받지 못해요. 펌웨어 1.1.0을 올리면 탈조 방지 기능이 켜져요.', 'err');
       renderApply();
       break;
     }
@@ -1095,7 +1247,8 @@ function applySettings() {
   const v = validate(readForm());
   if (!v.ok) { onFormChange(false); return; }
   const c = v.cfg;
-  send(`SET ${c.gear} ${c.ratioStr} ${c.micro} ${c.spr} ${c.rev ? 1 : 0} ${c.maxHz} ${c.maxRpm} ${c.step}`);
+  const accPart = app.devCfg && app.devCfg.acc !== undefined ? ` ${c.acc}` : '';  // 예전 펌웨어에는 가속도를 보내지 않음
+  send(`SET ${c.gear} ${c.ratioStr} ${c.micro} ${c.spr} ${c.rev ? 1 : 0} ${c.maxHz} ${c.maxRpm} ${c.step}${accPart}`);
 }
 
 /* 데모 조이스틱: 그림을 끌거나 키보드로 조작 */
@@ -1141,17 +1294,22 @@ function init() {
     if (saved && typeof saved === 'object') {
       const g = document.querySelector(`input[name="gear"][value="${saved.gear}"]`); if (g) g.checked = true;
       if (typeof saved.ratioRaw === 'string') $('ratio').value = saved.ratioRaw;
-      if (DIP[saved.micro]) $('micro').value = String(saved.micro);
+      if (Array.isArray(saved.dip) && saved.dip.length === 6) app.dip = saved.dip.map(Boolean);
+      if (typeof saved.rated === 'string') $('rated').value = saved.rated;
       if (saved.spr === 200 || saved.spr === 400) $('spr').value = String(saved.spr);
       $('rev').checked = !!saved.rev;
       const s = document.querySelector(`input[name="step"][value="${saved.step}"]`); if (s) s.checked = true;
       if (typeof saved.maxHzRaw === 'string') $('maxHz').value = saved.maxHzRaw;
-      if (typeof saved.maxRpmRaw === 'string') $('maxRpm').value = saved.maxRpmRaw;
+      // 1.0.0 기본값 600 rpm은 탈조가 잘 나서 새 기본값 300으로 (직접 바꾼 값은 그대로)
+      if (typeof saved.maxRpmRaw === 'string') $('maxRpm').value = saved.v !== 2 && saved.maxRpmRaw.trim() === '600' ? '300' : saved.maxRpmRaw;
+      if (typeof saved.accRaw === 'string') $('acc').value = saved.accRaw;
       app.lastGear = saved.gear || 'H';
     }
   } catch (e) { /* 저장값 없음 */ }
-  for (const el of document.querySelectorAll('input[name="gear"], input[name="step"], #micro, #spr, #rev')) el.addEventListener('change', () => onFormChange(true));
-  for (const id of ['ratio', 'maxHz', 'maxRpm']) $(id).addEventListener('input', () => onFormChange(true));
+  for (const el of document.querySelectorAll('input[name="gear"], input[name="step"], #spr, #rev')) el.addEventListener('change', () => onFormChange(true));
+  for (const id of ['ratio', 'maxHz', 'maxRpm', 'acc', 'rated']) $(id).addEventListener('input', () => onFormChange(true));
+  $('btnDip').addEventListener('click', () => confirmDip(true));
+  app.dipConf = evaluateDip(app.dip);
   $('ratio').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !$('btnApply').disabled) applySettings(); });
   $('btnApply').addEventListener('click', applySettings);
   $('btnConnect').addEventListener('click', connectBle);
